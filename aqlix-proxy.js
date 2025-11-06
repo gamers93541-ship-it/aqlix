@@ -1,6 +1,3 @@
-// Aqlix OpenAI Secure Proxy
-// حماية مفتاح OpenAI من الظهور في واجهة التطبيق
-
 import express from "express";
 import fetch from "node-fetch";
 import cors from "cors";
@@ -9,16 +6,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ضع مفتاح OpenAI في متغير البيئة
 const OPENAI_KEY = process.env.OPENAI_API_KEY;
+
+app.get("/", (req, res) => {
+  res.send("✅ Aqlix Proxy is Running Fine!");
+});
 
 app.post("/chat", async (req, res) => {
   try {
-    const { messages, model = "gpt-4o-mini" } = req.body;
-    if (!OPENAI_KEY) {
-      return res.status(500).json({ error: "OpenAI key not set on server." });
-    }
-
+    const { messages } = req.body;
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -26,19 +22,18 @@ app.post("/chat", async (req, res) => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model,
-        messages,
-        max_tokens: 400
+        model: "gpt-4o-mini",
+        messages
       })
     });
 
     const data = await response.json();
     res.json(data);
-  } catch (err) {
-    console.error("Proxy error:", err);
-    res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.error("Proxy error:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ Aqlix proxy running on port ${PORT}`));
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`✅ Aqlix Proxy running on port ${PORT}`));
