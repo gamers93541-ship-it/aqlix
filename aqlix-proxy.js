@@ -1,20 +1,22 @@
-import express from "express";
-import fetch from "node-fetch";
-import cors from "cors";
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-
-const OPENAI_KEY = process.env.OPENAI_API_KEY;
-
-app.get("/", (req, res) => {
-  res.send("✅ Aqlix Proxy is Running Fine!");
-});
-
+// بديل إذا لم يكن هناك مفتاح OpenAI
 app.post("/chat", async (req, res) => {
   try {
-    const { messages } = req.body;
+    const { message } = req.body;
+    
+    if (!OPENAI_KEY) {
+      // ردود ذكية عربية مسبقة الصنع
+      const responses = {
+        "مرحبا": "أهلاً وسهلاً! كيف يمكنني مساعدتك اليوم؟",
+        "كيف حالك": "الحمدلله بخير، شكراً لسؤالك! كيف يمكنني خدمتك؟",
+        "شكرا": "العفو! دائماً سعيد بمساعدتك. هل هناك شيء آخر؟",
+        "default": `أهلاً بك! سؤالك هو: "${message}". للأسف الخادم الرئيسي غير متوفر حالياً، لكن يمكنني مساعدتك في مواضيع متعددة.`
+      };
+      
+      const reply = responses[message] || responses.default;
+      return res.json({ reply });
+    }
+
+    // الكود الأصلي مع OpenAI
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -23,17 +25,23 @@ app.post("/chat", async (req, res) => {
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
-        messages
+        messages: [
+          {
+            role: "system", 
+            content: "You are a helpful Arabic assistant named Aqlix."
+          },
+          {
+            role: "user",
+            content: message
+          }
+        ]
       })
     });
 
     const data = await response.json();
-    res.json(data);
+    res.json({ reply: data.choices[0].message.content });
+    
   } catch (error) {
-    console.error("Proxy error:", error);
-    res.status(500).json({ error: error.message });
+    res.json({ reply: `عذراً، حدث خطأ: ${error.message}` });
   }
 });
-
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`✅ Aqlix Proxy running on port ${PORT}`));
